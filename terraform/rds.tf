@@ -1,7 +1,7 @@
 resource "aws_db_instance" "main" {
   identifier     = "democlipse-postgres"
   engine         = "postgres"
-  engine_version = "16.1"
+  engine_version = "16"
   instance_class = "db.t3.micro"
 
   allocated_storage = 20
