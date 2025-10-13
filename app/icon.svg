@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 60" width="50" height="60">
+    <!-- Transparent background -->
+<!--    <rect width="50" height="60" fill="none"/>-->
+
+    <defs>
+        <!-- Outer diamond gradient: left red, right darker red -->
+        <linearGradient id="outerDiamondSplit" x1="0%" x2="100%" y1="0%" y2="0%">
+            <stop offset="40.5%" stop-color="#D40000"/>
+            <stop offset="40.5%" stop-color="#5A0000"/>
+            <stop offset="100%" stop-color="#5A0000"/>
+        </linearGradient>
+        <!-- Inner diamond gradient: left white, right light gray -->
+        <linearGradient id="innerDiamondSplit" x1="0%" x2="100%" y1="0%" y2="0%">
+            <stop offset="37.5%" stop-color="#FFFFFF"/>
+            <stop offset="37.5%" stop-color="#E0E0E0"/>
+            <stop offset="100%" stop-color="#E0E0E0"/>
+        </linearGradient>
+    </defs>
+
+    <!-- Outer diamond: right side wider -->
+    <polygon points="25,5 50,30 25,55 8,30" fill="url(#outerDiamondSplit)"/>
+
+    <!-- Inner diamond: scaled proportionally -->
+    <polygon points="25,18 40,30 25,42 16,30" fill="url(#innerDiamondSplit)"/>
+</svg>

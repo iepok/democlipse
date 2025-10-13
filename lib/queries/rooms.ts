@@ -1,12 +1,28 @@
 import {pool} from "@/lib/db";
-import {Player, PlayerStatus, Room, RoomQueryRow} from "@/lib/types";
+import {GameVariant, Player, PlayerStatus, Room, Winner} from "@/lib/types";
 import {BadRequestError, UnauthorizedError} from "@/lib/errors";
 
+export interface RoomQueryRow {
+    roomId: string
+    entryCode: string | null
+    gameId: string
+    variant: GameVariant
+    startedAt: Date | null
+    completedAt: Date | null
+    winner: Winner
+    id: string
+    userId: string
+    name: string
+    status: PlayerStatus
+    revealedAt: Date | null
+}
+
 export async function getRoom(roomId: string, userId: string): Promise<Room> {
-    const result = await pool.query<RoomQueryRow>(`
+    const { rows } = await pool.query<RoomQueryRow>(`
         SELECT
             r.id as "roomId",
             r.entry_code as "entryCode",
+            g.id as "gameId",
             g.variant,
             g.started_at as "startedAt",
             g.completed_at as "completedAt",
@@ -29,13 +45,13 @@ export async function getRoom(roomId: string, userId: string): Promise<Room> {
         ORDER BY p.created_at ASC
     `, [roomId]);
 
-    if (result.rows.length === 0) {
+    if (rows.length === 0) {
         throw new Error('Room not found');
     }
 
-    const firstRow = result.rows[0];
+    const firstRow = rows[0];
 
-    const players: Player[] = result.rows
+    const players: Player[] = rows
         .filter(row => row.id !== null)
         .map(row => ({
             id: row.id,
@@ -48,6 +64,7 @@ export async function getRoom(roomId: string, userId: string): Promise<Room> {
     return {
         roomId: firstRow.roomId,
         entryCode: firstRow.entryCode,
+        gameId: firstRow.gameId,
         variant: firstRow.variant,
         startedAt: firstRow.startedAt,
         completedAt: firstRow.completedAt,
@@ -72,12 +89,12 @@ function hideCardIfNeeded(row: any, currentUserId: string): PlayerStatus {
 }
 
 export async function createRoom(): Promise<string> {
-    const result = await pool.query(`
+    const { rows } = await pool.query(`
         INSERT INTO rooms DEFAULT VALUES
         RETURNING id as "roomId"
     `);
 
-    return result.rows[0].roomId;
+    return rows[0].roomId;
 }
 
 export async function generateEntryCode(roomId: string): Promise<void> {
@@ -108,20 +125,20 @@ export async function requireRoomMembership(
     roomId: string,
     userId: string
 ): Promise<void> {
-    const result = await pool.query(`
+    const { rows } = await pool.query(`
         SELECT 1 
         FROM players p
         JOIN games g ON g.id = p.game_id
         WHERE g.room_id = $1 AND p.user_id = $2
     `, [roomId, userId])
 
-    if (result.rows.length === 0) {
+    if (rows.length === 0) {
         throw new UnauthorizedError()  // Generic - doesn't leak info
     }
 }
 
 export async function validateUserNotInOpenGame(userId: string): Promise<void> {
-    const result = await pool.query(`
+    const { rows } = await pool.query(`
         SELECT 1 
         FROM players p
         JOIN games g ON g.id = p.game_id
@@ -130,7 +147,7 @@ export async function validateUserNotInOpenGame(userId: string): Promise<void> {
         LIMIT 1
     `, [userId])
 
-    if (result.rows.length > 0) {
+    if (rows.length > 0) {
         throw new BadRequestError('You are already in an active game')
     }
 }

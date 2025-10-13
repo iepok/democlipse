@@ -1,32 +1,32 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { redirect } from 'next/navigation'
-import { pool } from '@/lib/db'
+import {getServerSession} from 'next-auth'
+import {authOptions} from '@/lib/auth'
+import {redirect} from 'next/navigation'
 import LoginButton from './LoginButton'
 import HomeForm from './HomeForm'
+import {getUserActiveGame} from "@/lib/queries/redirects";
 
 export default async function Home() {
     const session = await getServerSession(authOptions)
 
-    // Not logged in
     if (!session?.user) {
         return <LoginButton />
     }
 
-    // Check active game. todo: uncomment when database ready
-  //   const result = await pool.query<{ room_id: string }>(`
-  //   SELECT g.room_id
-  //   FROM players p
-  //   JOIN games g ON g.id = p.game_id
-  //   WHERE p.user_id = $1 AND g.completed_at IS NULL
-  //   LIMIT 1
-  // `, [session.user.id])
-  //
-  //   if (result.rows.length > 0) {
-  //       redirect(`/room/${result.rows[0].room_id}`)
-  //   }
+    const activeGame = await getUserActiveGame(session.user.id)
 
-    // Show home
+    if (activeGame && !activeGame.revealed) {
+        redirect(`/room/${activeGame.roomId}`)
+    }
+
     const defaultName = session.user.email?.split('@')[0] || ''
-    return <HomeForm defaultName={defaultName} />
+    return (
+        <div>
+            <HomeForm defaultName={defaultName} />
+            {activeGame?.revealed && (
+                <a href={`/room/${activeGame.roomId}`}>
+                    Return to Room
+                </a>
+            )}
+        </div>
+    )
 }

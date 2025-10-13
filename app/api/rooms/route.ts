@@ -16,10 +16,10 @@ export async function POST(request: NextRequest) {
         const roomId = await createRoom()
         const gameId = await createGame(roomId, validVariant)
         await createPlayer(gameId, userId, validName)
-        const room = await getRoom(roomId, userId);
+        const room = await getRoom(roomId, userId)
 
-        return NextResponse.json({ room }, { status: 201 });
+        return NextResponse.json({ room }, { status: 201 })
     } catch (error) {
-        return handleApiError(error);
+        return handleApiError(error)
     }
 }

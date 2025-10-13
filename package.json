@@ -10,6 +10,7 @@
     "db:init": "tsx lib/init-db.ts"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "next": "15.5.4",
     "next-auth": "^4.24.11",
     "pg": "^8.16.3",

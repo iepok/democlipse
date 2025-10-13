@@ -3,13 +3,13 @@ import {BadRequestError, NotFoundError} from "@/lib/errors";
 import {GameVariant, PlayerStatus, Winner} from "@/lib/types";
 
 export async function createGame(roomId: string, variant: GameVariant): Promise<string> {
-    const result = await pool.query<{ gameId: string }>(`
+    const { rows } = await pool.query<{ gameId: string }>(`
         INSERT INTO games (room_id, variant)
         VALUES ($1, $2)
         RETURNING id as "gameId"
     `, [roomId, variant]);
 
-    return result.rows[0].gameId;
+    return rows[0].gameId;
 }
 
 export async function startGameAndDistributeCards(
@@ -61,7 +61,7 @@ export async function completeGame(roomId: string, winner: Winner): Promise<void
 }
 
 export async function getGameIdFromRoom(roomId: string): Promise<string> {
-    const result = await pool.query<{ gameId: string }>(`
+    const { rows } = await pool.query<{ gameId: string }>(`
     SELECT id as "gameId"
     FROM games
     WHERE room_id = $1
@@ -69,72 +69,72 @@ export async function getGameIdFromRoom(roomId: string): Promise<string> {
     LIMIT 1
   `, [roomId])
 
-    if (result.rows.length === 0) {
+    if (rows.length === 0) {
         throw new Error('Game not found')
     }
 
-    return result.rows[0].gameId
+    return rows[0].gameId
 }
 
 export async function getGameAndRoomIdFromCode(code: string): Promise<{ gameId: string; roomId: string }> {
-    const result = await pool.query<{ gameId: string; roomId: string }>(`
+    const { rows } = await pool.query<{ gameId: string; roomId: string }>(`
         SELECT g.id as "gameId", r.id as "roomId"
         FROM games g
-                 JOIN rooms r ON g.room_id = r.id
+        JOIN rooms r ON g.room_id = r.id
         WHERE r.entry_code = $1
         ORDER BY g.created_at DESC
             LIMIT 1
     `, [code])
 
-    if (result.rows.length === 0) {
+    if (rows.length === 0) {
         throw new Error('Invalid code or game not found')
     }
 
-    return result.rows[0]
+    return rows[0]
 }
 
 export async function getGameVariant(roomId: string): Promise<GameVariant> {
-    const result = await pool.query<{ variant: GameVariant }>(`
+    const { rows } = await pool.query<{ variant: GameVariant }>(`
         SELECT variant
         FROM games
         WHERE room_id = $1
     `, [roomId])
 
-    if (result.rows.length === 0) {
+    if (rows.length === 0) {
         throw new NotFoundError('Game not found')
     }
 
-    return result.rows[0].variant
+    return rows[0].variant
 }
 
 export async function validateGameNotStarted(roomId: string): Promise<void> {
-    const result = await pool.query(`
+    const { rows } = await pool.query(`
         SELECT started_at 
         FROM games 
         WHERE room_id = $1
     `, [roomId])
 
-    if (result.rows.length === 0) {
+    if (rows.length === 0) {
         throw new BadRequestError('Game not found')
     }
 
-    if (result.rows[0].started_at !== null) {
+    if (rows[0].started_at !== null) {
         throw new BadRequestError('Game already started')
     }
 }
 
 export async function validateGameStarted(roomId: string): Promise<void> {
-    const result = await pool.query(`
+    const { rows } = await pool.query(`
         SELECT started_at 
         FROM games 
         WHERE room_id = $1
     `, [roomId])
 
-    if (result.rows.length === 0) {
+    if (rows.length === 0) {
         throw new BadRequestError('Game not found')
     }
 
-    if (result.rows[0].started_at === null) {
+    if (rows[0].started_at === null) {
         throw new BadRequestError('Game has not started yet')
     }
 }

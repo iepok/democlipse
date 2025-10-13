@@ -1,37 +1,50 @@
-export default function RoomPage({ params }: { params: { roomId: string } }) {
-    return (
-        <main className="min-h-screen bg-gray-100 p-8">
-            <div className="max-w-2xl mx-auto">
-                {/* Room Header */}
-                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h1 className="text-2xl font-bold">Room: {params.roomId}</h1>
-                        <button className="text-blue-500 hover:underline">
-                            Copy Link
-                        </button>
-                    </div>
+import {getServerSession} from 'next-auth'
+import {authOptions} from '@/lib/auth'
+import {redirect} from 'next/navigation'
+import {createPlayer, deletePlayer, getRoom} from '@/lib/queries'
+import RoomClient from './RoomClient'
+import {getUserOtherRoom} from "@/lib/queries/redirects";
 
-                    <p className="text-gray-600">Share this room ID with your friends to join</p>
-                </div>
+export default async function RoomPage({ params }: { params: { roomId: string } }) {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+        redirect(`/api/auth/signin?callbackUrl=/room/${params.roomId}`)
+    }
 
-                {/* Players List */}
-                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                    <h2 className="text-xl font-semibold mb-4">Players</h2>
+    const { id: userId, email } = session.user
 
-                    {/* Player list will go here */}
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                            <span className="font-medium">Player 1</span>
-                            <span className="text-sm text-green-600">Ready</span>
-                        </div>
-                    </div>
-                </div>
+    const room = await getRoom(params.roomId, userId)
 
-                {/* Ready Button */}
-                <button className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors text-lg font-semibold">
-                    Ready
-                </button>
-            </div>
-        </main>
-    );
+    const currentPlayer = room.players.find(p => p.userId === userId)
+    if (currentPlayer) {
+        return <RoomClient game={room} currentPlayer={currentPlayer} />
+    }
+
+    if (room.startedAt) {
+        redirect('/')
+    }
+
+    // Target is lobby - check for other room conflict
+    const otherRoom = await getUserOtherRoom(userId, params.roomId)
+
+    if (otherRoom) {
+        if (otherRoom.started && !otherRoom.revealed) {
+            // Active unrevealed - redirect with banner
+            redirect(`/room/${otherRoom.roomId}?attemptedJoin=${params.roomId}`)
+        }
+
+        if (!otherRoom.started) {
+            // Other lobby - delete old player first
+            await deletePlayer(userId, otherRoom.roomId)
+        }
+
+        // If revealed or deleted - fall through to join
+    }
+
+    const defaultName = email?.split('@')[0] || ''
+    await createPlayer(room.gameId, userId, defaultName)
+
+    const newRoom = await getRoom(params.roomId, userId)
+    const newPlayer = newRoom.players.find(p => p.userId === userId)!
+    return <RoomClient game={newRoom} currentPlayer={newPlayer} />
 }
