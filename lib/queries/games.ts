@@ -34,14 +34,21 @@ export async function startGameAndDistributeCards(
             WHERE id = $1
         `, [roomId])
 
-        // Distribute cards to ALL players in ONE query
-        const values = playerIds.map((id, i) => `('${id}', '${cards[i]}')`).join(',')
+        // Build parameterized VALUES clause
+        const placeholders = playerIds.map((_, i) => {
+            const idIdx = i * 2 + 1
+            const statusIdx = i * 2 + 2
+            return `($${idIdx}::uuid, $${statusIdx})`
+        }).join(',')
+
+        const values = playerIds.flatMap((id, i) => [id, cards[i]])
+
         await client.query(`
             UPDATE players
-            SET status = data.status
-            FROM (VALUES ${values}) AS data(id, status)
-            WHERE players.id = data.id::uuid
-        `)
+            SET status = data.status::text
+            FROM (VALUES ${placeholders}) AS data(id, status)
+            WHERE players.id = data.id
+        `, values)
 
         await client.query('COMMIT')
     } catch (error) {
