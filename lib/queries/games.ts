@@ -91,16 +91,16 @@ export async function getGameVariant(roomId: string): Promise<GameVariant> {
 }
 
 export async function isGameStarted(roomId: string): Promise<boolean | null> {
-    const result = await pool.query<{ started_at: string | null }>(`
+    const result = await pool.query<{started_at: string | null}>(`
         SELECT started_at
         FROM games
         WHERE room_id = $1
-        ORDER BY created_at DESC
+          AND completed_at IS NULL
             LIMIT 1
     `, [roomId])
 
     if (result.rows.length === 0) {
-        return null  // Game not found
+        return null  // No active game
     }
 
     return result.rows[0].started_at !== null
