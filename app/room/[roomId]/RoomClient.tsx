@@ -18,7 +18,7 @@ export default function RoomClient({game, currentPlayer}: {
     const router = useRouter()
 
     useEffect(() => {
-        const interval = setInterval(() => router.refresh(), 20000)
+        const interval = setInterval(() => router.refresh(), 2000)
         return () => clearInterval(interval)
     }, [router])
 
