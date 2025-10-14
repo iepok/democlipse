@@ -1,17 +1,10 @@
-// components/AttemptedJoinBanner.tsx
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import Button from './Button'
 
-export default function AttemptedJoinBanner({
-                                                currentRoomId,
-                                                currentPlayerId
-                                            }: {
-    currentRoomId: string
-    currentPlayerId: string
-}) {
+export default function AttemptedJoinBanner({ roomId, playerId }: { roomId: string, playerId: string }) {
     const router = useRouter()
     const searchParams = useSearchParams()
     const attemptedJoin = searchParams.get('attemptedJoin')
@@ -20,28 +13,22 @@ export default function AttemptedJoinBanner({
     if (!attemptedJoin) return null
 
     const handleStayHere = () => {
-        router.push(`/room/${currentRoomId}`)
+        router.replace(`/room/${roomId}`)
     }
 
     const handleLeaveAndJoin = async () => {
         try {
-            // First check if target room is still valid
-            const checkResponse = await fetch(`/api/rooms/${attemptedJoin}/check`)
+            const checkResponse = await fetch(`/api/rooms/${attemptedJoin}/canJoin`)
             const checkData = await checkResponse.json()
 
-            if (!checkResponse.ok || checkData.started || checkData.completed) {
+            if (!checkResponse.ok || !checkData.joinable) {
                 setError('That game is no longer available')
                 return
             }
 
-            // Target is valid - reveal card in current room
-            await fetch(`/api/players/${currentPlayerId}/reveal`, {
-                method: 'POST'
-            })
+            await fetch(`/api/players/${playerId}/reveal`, { method: 'POST' })
 
-            // Redirect to new room
             router.push(`/room/${attemptedJoin}`)
-            router.refresh()
         } catch (err) {
             setError('Something went wrong')
         }

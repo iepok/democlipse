@@ -25,6 +25,22 @@ export default function CurrentPlayerSection({ player }: { player: Player }) {
         router.refresh()
     }
 
+    const handleLeave = async () => {
+        try {
+            if (player.status === null || player.status === 'ready') {
+                await fetch(`/api/players/${player.id}`, { method: 'DELETE' })
+            } else if (player.status === 'good' || player.status === 'bad' || player.status === 'joker') {
+                if (!player.revealedAt) {
+                    await fetch(`/api/players/${player.id}/reveal`, { method: 'POST' })
+                }
+            }
+
+            router.push('/')
+        } catch (err) {
+            alert('Failed to leave room. Please try again.')
+        }
+    }
+
     const renderByStatus = (status: PlayerStatus) => {
         switch (status) {
             case null:
@@ -102,7 +118,7 @@ export default function CurrentPlayerSection({ player }: { player: Player }) {
             {renderByStatus(player.status)}
 
             <button
-                onClick={() => router.push('/')}
+                onClick={handleLeave}
                 className="w-full mt-4 text-sm text-red-600 hover:text-red-700 underline"
             >
                 Leave Room

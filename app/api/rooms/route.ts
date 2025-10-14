@@ -1,5 +1,5 @@
 import {NextRequest, NextResponse} from 'next/server';
-import {createGame, createPlayer, createRoom, getRoom, validateUserNotInOpenGame} from '@/lib/queries';
+import {createGame, createPlayer, createRoom, validateUserNotInOpenGame} from '@/lib/queries';
 import {requireAuth, validateName} from '@/lib/auth'
 import {handleApiError} from "@/lib/error-handler";
 import {validateVariant} from "@/lib/game-variants";
@@ -16,9 +16,8 @@ export async function POST(request: NextRequest) {
         const roomId = await createRoom()
         const gameId = await createGame(roomId, validVariant)
         await createPlayer(gameId, userId, validName)
-        const room = await getRoom(roomId, userId)
 
-        return NextResponse.json({ room }, { status: 201 })
+        return NextResponse.json({ roomId }, { status: 201 })
     } catch (error) {
         return handleApiError(error)
     }

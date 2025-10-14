@@ -172,6 +172,18 @@ export async function getGameReadyInfo(
     }
 }
 
+export async function getLastPlayerName(userId: string): Promise<string | null> {
+    const result = await pool.query<{name: string}>(`
+        SELECT name
+        FROM players
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1
+    `, [userId])
+
+    return result.rows.length > 0 ? result.rows[0].name : null
+}
+
 export async function validateCardNotRevealed(playerId: string): Promise<void> {
     const { rows } = await pool.query(`
         SELECT revealed_at

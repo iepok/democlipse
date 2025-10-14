@@ -1,19 +1,26 @@
 import {getServerSession} from 'next-auth'
 import {authOptions} from '@/lib/auth'
-import {redirect} from 'next/navigation'
+import {notFound, redirect} from 'next/navigation'
 import {createPlayer, deletePlayer, getRoom} from '@/lib/queries'
 import RoomClient from './RoomClient'
 import {getUserOtherRoom} from "@/lib/queries/redirects";
 
-export default async function RoomPage({ params }: { params: { roomId: string } }) {
+export default async function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
+    const { roomId } = await params
+
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-        redirect(`/api/auth/signin?callbackUrl=/room/${params.roomId}`)
+        redirect(`/api/auth/signin?callbackUrl=/room/${roomId}`)
     }
 
     const { id: userId, email } = session.user
 
-    const room = await getRoom(params.roomId, userId)
+    let room
+    try {
+        room = await getRoom(roomId, userId)
+    } catch (error) {
+        notFound()
+    }
 
     const currentPlayer = room.players.find(p => p.userId === userId)
     if (currentPlayer) {
@@ -25,12 +32,12 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
     }
 
     // Target is lobby - check for other room conflict
-    const otherRoom = await getUserOtherRoom(userId, params.roomId)
+    const otherRoom = await getUserOtherRoom(userId, roomId)
 
     if (otherRoom) {
         if (otherRoom.started && !otherRoom.revealed) {
             // Active unrevealed - redirect with banner
-            redirect(`/room/${otherRoom.roomId}?attemptedJoin=${params.roomId}`)
+            redirect(`/room/${otherRoom.roomId}?attemptedJoin=${roomId}`)
         }
 
         if (!otherRoom.started) {
@@ -44,7 +51,7 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
     const defaultName = email?.split('@')[0] || ''
     await createPlayer(room.gameId, userId, defaultName)
 
-    const newRoom = await getRoom(params.roomId, userId)
+    const newRoom = await getRoom(roomId, userId)
     const newPlayer = newRoom.players.find(p => p.userId === userId)!
     return <RoomClient game={newRoom} currentPlayer={newPlayer} />
 }

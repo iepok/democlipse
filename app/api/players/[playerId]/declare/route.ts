@@ -14,11 +14,11 @@ import type {Winner} from "@/lib/types";
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { playerId: string } }
+    { params }: { params: Promise<{ playerId: string }> }
 ) {
     try {
         const userId = await requireAuth()
-        const { playerId } = params;
+        const { playerId } = await params;
         const body = await request.json()
         const { declaration } = body as { declaration: Winner }
 
@@ -30,7 +30,7 @@ export async function POST(
         const roomId = await getRoomIdFromPlayer(playerId)
         await validateGameStarted(roomId)
 
-        let room = await getRoom(roomId, userId)
+        const room = await getRoom(roomId, userId)
 
         if (room.variant !== 'apocalypse') {
             throw new BadRequestError('Declarations are only allowed in apocalypse variant')
@@ -48,9 +48,8 @@ export async function POST(
         }
 
         await completeGame(roomId, winner)
-        room = await getRoom(roomId, userId)
 
-        return NextResponse.json({ room, status: 200 })
+        return NextResponse.json({ success: true })
     } catch (error) {
         return handleApiError(error)
     }

@@ -1,7 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server';
 import {
     getGameReadyInfo,
-    getRoom,
     getRoomIdFromPlayer,
     markPlayerReady,
     requirePlayerOwnership, startGameAndDistributeCards,
@@ -13,13 +12,13 @@ import {GAME_VARIANTS} from "@/lib/game-variants";
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { playerId: string } }
+    { params }: { params: Promise<{ playerId: string }> }
 ) {
     try {
         const userId = await requireAuth()
         const { name } = await request.json()
         const validName = validateName(name)
-        const { playerId } = params
+        const { playerId } = await params
 
         await requirePlayerOwnership(playerId, userId)
         const roomId = await getRoomIdFromPlayer(playerId)
@@ -37,8 +36,7 @@ export async function POST(
             await markPlayerReady(playerId, validName)
         }
 
-        const room = await getRoom(roomId, userId)
-        return NextResponse.json({ room }, { status: 200 })
+        return NextResponse.json({ success: true })
     } catch (error) {
         return handleApiError(error)
     }

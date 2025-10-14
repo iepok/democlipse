@@ -1,7 +1,7 @@
 import {GAME_VARIANTS} from '@/lib/game-variants'
 import {GameVariant} from '@/lib/types'
 
-export default function GameTitle({variant}: {variant: GameVariant}) {
+export default function GameTitle({ variant }: { variant: GameVariant }) {
     const variantConfig = GAME_VARIANTS[variant]
     const minPlayers = variantConfig.minPlayers
     const maxPlayers = variantConfig.maxPlayers

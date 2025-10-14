@@ -13,11 +13,11 @@ import {GAME_VARIANTS} from "@/lib/game-variants";
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { playerId: string } }
+    { params }: { params: Promise<{ playerId: string }> }
 ) {
     try {
         const userId = await requireAuth()
-        const { playerId } = params;
+        const { playerId } = await params;
 
         await requirePlayerOwnership(playerId, userId)
         const roomId = await getRoomIdFromPlayer(playerId)
@@ -25,7 +25,7 @@ export async function POST(
         await validateCardNotRevealed(playerId)
 
         await revealCard(playerId)
-        let room = await getRoom(roomId, userId)
+        const room = await getRoom(roomId, userId)
 
         // Check win condition
         const variantConfig = GAME_VARIANTS[room.variant]
@@ -33,10 +33,9 @@ export async function POST(
 
         if (winner !== null) {
             await completeGame(roomId, winner)
-            room = await getRoom(roomId, userId)
         }
 
-        return NextResponse.json({ room, status: 200 })
+        return NextResponse.json({ success: true })
     } catch (error) {
         return handleApiError(error)
     }

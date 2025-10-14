@@ -1,5 +1,3 @@
-// lib/error-handler.ts
-
 import { NextResponse } from 'next/server'
 import { ApiError } from './errors'
 
@@ -13,8 +11,5 @@ export function handleApiError(error: unknown) {
         )
     }
 
-    return NextResponse.json(
-        { message: 'Internal server error' },
-        { status: 500 }
-    )
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
 }
