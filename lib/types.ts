@@ -1,5 +1,3 @@
-// types.ts
-
 export type PlayerStatus = null | 'ready' | 'good' | 'bad' | 'joker' | 'hidden'
 
 export type GameVariant = 'standard' | 'apocalypse'

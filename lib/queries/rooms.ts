@@ -73,7 +73,7 @@ export async function getRoom(roomId: string, userId: string): Promise<Room> {
     };
 }
 
-function hideCardIfNeeded(row: any, currentUserId: string): PlayerStatus {
+function hideCardIfNeeded(row: RoomQueryRow, currentUserId: string): PlayerStatus {
     if (
         row.userId === currentUserId ||
         row.status === null ||
