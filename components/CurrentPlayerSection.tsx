@@ -12,12 +12,21 @@ export default function CurrentPlayerSection({ player }: { player: Player }) {
     const [showCard, setShowCard] = useState(false)
 
     const handleReady = async () => {
-        await fetch(`/api/players/${player.id}/ready`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name })
-        })
-        router.refresh()
+        try {
+            const res = await fetch(`/api/players/${player.id}/ready`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name})
+            })
+
+            if (!res.ok) {
+                throw new Error('Failed to ready up')
+            }
+
+            router.refresh()
+        } catch (error) {
+            alert('Failed to ready up. Please try again.')
+        }
     }
 
     const handleReveal = async () => {

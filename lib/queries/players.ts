@@ -1,6 +1,6 @@
 import {pool} from "@/lib/db";
 import {BadRequestError, NotFoundError, UnauthorizedError} from "@/lib/errors";
-import {GameVariant} from "@/lib/types";
+import {GameVariant, PlayerStatus} from "@/lib/types";
 
 export async function createPlayer(
     gameId: string,
@@ -141,33 +141,35 @@ export async function getRoomIdFromPlayer(playerId: string): Promise<string> {
     return rows[0].roomId
 }
 
-export async function getGameReadyInfo(
+export async function getPlayersForReadyCheck(
     playerId: string
 ): Promise<{
-    totalReady: number
-    playerIds: string[]
+    players: {
+        id: string
+        status: PlayerStatus
+    }[]
     gameVariant: GameVariant
 }> {
     const { rows } = await pool.query<{
-        totalReady: string
+        player_id: string
+        status: PlayerStatus
         variant: GameVariant
-        playerIds: string[]
     }>(`
         SELECT
-            COUNT(CASE WHEN p2.status = 'ready' THEN 1 END) as "totalReady",
-            g.variant,
-            array_agg(p_all.id ORDER BY p_all.created_at) as "playerIds"
-        FROM players p1
-        JOIN games g ON g.id = p1.game_id
-        LEFT JOIN players p2 ON p2.game_id = g.id AND p2.id != p1.id
-        JOIN players p_all ON p_all.game_id = g.id
-        WHERE p1.id = $1
-        GROUP BY g.variant
+            p.id AS player_id,
+            p.status,
+            g.variant
+        FROM players p
+        JOIN games g ON g.id = p.game_id
+        JOIN players target ON target.id = $1
+        WHERE p.game_id = target.game_id;
     `, [playerId])
 
     return {
-        totalReady: parseInt(rows[0].totalReady),
-        playerIds: rows[0].playerIds,
+        players: rows.map(r => ({
+            id: r.player_id,
+            status: r.status
+        })),
         gameVariant: rows[0].variant
     }
 }

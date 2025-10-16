@@ -1,6 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server';
 import {
-    getGameReadyInfo,
+    getPlayersForReadyCheck,
     getRoomIdFromPlayer,
     markPlayerReady,
     requirePlayerOwnership, startGameAndDistributeCards,
@@ -24,14 +24,19 @@ export async function POST(
         const roomId = await getRoomIdFromPlayer(playerId)
         await validateGameNotStarted(roomId)
 
-        const info = await getGameReadyInfo(playerId)
-        const totalPlayers = info.playerIds.length
-        const allOthersReady = info.totalReady === totalPlayers - 1
-        const hasMinPlayers = totalPlayers >= GAME_VARIANTS[info.gameVariant].minPlayers
+        const { players, gameVariant } = await getPlayersForReadyCheck(playerId)
+        const variantConfig = GAME_VARIANTS[gameVariant]
+
+        const allOthersReady = players
+            .filter(p => p.id !== playerId)
+            .every(p => p.status === 'ready')
+        const playerCount = players.length;
+        const hasMinPlayers = playerCount >= variantConfig.minPlayers
 
         if (allOthersReady && hasMinPlayers) {
-            const cards = GAME_VARIANTS[info.gameVariant].distributeCards(totalPlayers)
-            await startGameAndDistributeCards(roomId, info.playerIds, cards)
+            const playerIds = players.map(p => p.id)
+            const cards = variantConfig.distributeCards(playerCount)
+            await startGameAndDistributeCards(roomId, playerIds, cards)
         } else {
             await markPlayerReady(playerId, validName)
         }
