@@ -64,6 +64,7 @@ export async function completeGame(roomId: string, winner: Winner): Promise<void
         UPDATE games
         SET completed_at = NOW(), winner = $1
         WHERE room_id = $2
+        AND completed_at IS NULL
     `, [winner, roomId])
 }
 

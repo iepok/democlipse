@@ -1,4 +1,4 @@
-import {GameVariant, PlayerStatus, Room, Winner} from "@/lib/types";
+import {GameVariant, Player, PlayerStatus, Room, Winner} from "@/lib/types";
 import {ApiError, BadRequestError} from "@/lib/errors";
 
 interface VariantConfig {
@@ -15,57 +15,69 @@ export const GAME_VARIANTS: Record<GameVariant, VariantConfig> = {
         minPlayers: 3,
         maxPlayers: 8,
         distributeCards: (playerCount: number): PlayerStatus[] => {
-            switch (playerCount) {
-                case 3:
-                    return shuffleArray(['good', 'good', 'bad'])
-                case 4:
-                    return shuffleArray(['good', 'good', 'good', 'bad'])
-                case 5:
-                    return shuffleArray(['good', 'good', 'good', 'bad', 'joker'])
-                case 6:
-                    return shuffleArray(['good', 'good', 'good', 'good', 'bad', 'bad'])
-                case 7:
-                    return shuffleArray(['good', 'good', 'good', 'good', 'bad', 'bad', 'joker'])
-                case 8:
-                    return shuffleArray(['good', 'good', 'good', 'good', 'good', 'bad', 'bad', 'joker'])
-                default:
-                    throw new ApiError(`Invalid player count for standard variant: ${playerCount}`)
+            const presets: Record<number, PlayerStatus[]> = {
+                3: ['good', 'good', 'bad'],
+                4: ['good', 'good', 'good', 'bad'],
+                5: ['good', 'good', 'good', 'bad', 'joker'],
+                6: ['good', 'good', 'good', 'good', 'bad', 'bad'],
+                7: ['good', 'good', 'good', 'good', 'bad', 'bad', 'joker'],
+                8: ['good', 'good', 'good', 'good', 'good', 'bad', 'bad', 'joker'],
             }
+
+            const cards = presets[playerCount]
+            if (!cards) {
+                throw new ApiError(`Invalid player count for standard variant: ${playerCount}`)
+            }
+
+            return shuffleArray(cards)
         },
         findWinner: (room: Room): Winner => {
             // Game not started yet
             if (!room.startedAt) return null
 
             const players = room.players
-            const revealedPlayers = players.filter(p => p.revealedAt !== null)
+
+            let firstRevealed: Player | undefined
+            let hiddenBad: number = 0
+            let hiddenGood: number = 0
+            let jokerHidden = false
+
+            for (const player of players) {
+                if (player.revealedAt !== null) {
+                    if (!firstRevealed || player.revealedAt.getTime() < firstRevealed.revealedAt!.getTime()) {
+                        firstRevealed = player
+                    }
+                } else {
+                    switch (player.status) {
+                        case 'good': hiddenGood++; break
+                        case 'bad': hiddenBad++; break
+                        case 'joker': jokerHidden = true
+                    }
+                }
+            }
 
             // No one revealed yet
-            if (revealedPlayers.length === 0) return null
+            if (firstRevealed === undefined) return null
 
-            // Sort by reveal time to find first reveal
-            const sortedRevealed = [...revealedPlayers].sort((a, b) =>
-                a.revealedAt!.getTime() - b.revealedAt!.getTime()
-            )
-            const firstRevealed = sortedRevealed[0]
-
-            // Rule 1: Joker revealed first → Joker wins
+            // Rule 1: Joker revealed first → solo win
             if (firstRevealed.status === 'joker') {
                 return 'jokerTeam'
             }
 
-            const goodPlayers = players.filter(p => p.status === 'good')
-            const badPlayers = players.filter(p => p.status === 'bad')
+            // Joker joins first revealed's team (even if revealed later)
 
-            const allBadRevealed = badPlayers.every(p => p.revealedAt !== null)
-            const unrevealedGood = goodPlayers.filter(p => p.revealedAt === null)
+            if (jokerHidden) {
+                if (firstRevealed.status === 'good') hiddenGood++
+                else if (firstRevealed.status === 'bad') hiddenBad++
+            }
 
             // Rule 2: All bad revealed → Good team wins
-            if (allBadRevealed && badPlayers.length > 0) {
+            if (hiddenBad === 0) {
                 return 'goodTeam'
             }
 
-            // Rule 3: Only 1 good unrevealed → Bad team wins
-            if (unrevealedGood.length === 1) {
+            // Rule 3: Only one good left unrevealed → Bad team wins
+            if (hiddenGood === 1) {
                 return 'badTeam'
             }
 

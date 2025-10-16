@@ -187,14 +187,22 @@ export async function getLastPlayerName(userId: string): Promise<string | null> 
 }
 
 export async function validateCardNotRevealed(playerId: string): Promise<void> {
-    const { rows } = await pool.query(`
-        SELECT revealed_at
-        FROM players
-        WHERE id = $1
+    const { rows } = await pool.query<{
+        revealed_at: string | null
+        completed_at: string | null
+    }>(`
+        SELECT p.revealed_at, g.completed_at
+        FROM players p
+        JOIN games g ON g.id = p.game_id
+        WHERE p.id = $1
     `, [playerId])
 
     if (rows.length === 0) {
         throw new NotFoundError('Player not found')
+    }
+
+    if (rows[0].completed_at !== null) {
+        throw new BadRequestError('Game already completed')
     }
 
     if (rows[0].revealed_at !== null) {
