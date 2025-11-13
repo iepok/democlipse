@@ -1,9 +1,9 @@
 import {getServerSession} from 'next-auth'
-import {authOptions} from '@/lib/auth'
+import {authOptions, requireAuth} from '@/lib/auth'
 import {notFound, redirect} from 'next/navigation'
-import {createPlayer, deletePlayer, getRoom} from '@/lib/queries'
+import {createPlayer, deletePlayer, getLastPlayerName, getRoom} from '@/lib/queries'
 import RoomClient from './RoomClient'
-import {getUserOtherRoom} from "@/lib/queries/redirects";
+import {getUserActiveGame, getUserOtherRoom} from "@/lib/queries/redirects";
 
 export default async function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
     const { roomId } = await params
@@ -13,12 +13,12 @@ export default async function RoomPage({ params }: { params: Promise<{ roomId: s
         redirect(`/api/auth/signin?callbackUrl=/room/${roomId}`)
     }
 
-    const { id: userId, email } = session.user
+    const { id: userId, name, email } = session.user
 
     let room
     try {
         room = await getRoom(roomId, userId)
-    } catch (error) {
+    } catch (_) {
         notFound()
     }
 
@@ -48,7 +48,9 @@ export default async function RoomPage({ params }: { params: Promise<{ roomId: s
         // If revealed or deleted - fall through to join
     }
 
-    const defaultName = email?.split('@')[0] || ''
+    const lastUsedName = await getLastPlayerName(userId)
+    const defaultName = lastUsedName || name || email?.split('@')[0] || ''
+
     await createPlayer(room.gameId, userId, defaultName)
 
     const newRoom = await getRoom(roomId, userId)

@@ -144,17 +144,6 @@ function shuffleArray<T>(array: T[]): T[] {
     return shuffled
 }
 
-export function validateMinPlayers(
-    playerCount: number,
-    variant: GameVariant
-): void {
-    const minPlayers = GAME_VARIANTS[variant].minPlayers
-
-    if (playerCount < minPlayers) {
-        throw new BadRequestError(`Need at least ${minPlayers} players`)
-    }
-}
-
 export function validateMaxPlayers(
     playerCount: number,
     variant: GameVariant

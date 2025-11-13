@@ -7,9 +7,7 @@ export async function GET(
 ) {
     try {
         const { roomId } = await params
-
         const started = await isGameStarted(roomId)
-
         return NextResponse.json({ joinable: started === false })
     } catch (error) {
         return NextResponse.json({ joinable: false }, { status: 500 })

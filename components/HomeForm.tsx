@@ -37,14 +37,7 @@ export default function HomeForm({defaultName}: {defaultName: string}) {
         setLoading(true)
 
         try {
-            const res = await fetch(`/api/rooms/join/${code}`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name})
-            })
-            if (!res.ok) {
-                throw new Error('Failed to create room')
-            }
+            const res = await fetch(`/api/rooms/join/${code}`)
             const { roomId } = await res.json()
             router.replace(`/room/${roomId}`)
         } catch (error) {

@@ -1,6 +1,6 @@
 import {pool} from "@/lib/db";
 import {GameVariant, Player, PlayerStatus, Room, Winner} from "@/lib/types";
-import {BadRequestError, UnauthorizedError} from "@/lib/errors";
+import {BadRequestError, NotFoundError, UnauthorizedError} from "@/lib/errors";
 
 export interface RoomQueryRow {
     roomId: string
@@ -137,14 +137,30 @@ export async function requireRoomMembership(
     }
 }
 
+export async function getRoomIdFromCode(code: string): Promise<{ roomId: string }> {
+    const { rows } = await pool.query<{ roomId: string }>(`
+        SELECT id as "roomId"
+        FROM rooms
+        WHERE entry_code = $1
+    `, [code])
+
+    if (rows.length === 0) {
+        throw new NotFoundError('Invalid code or game not found')
+    }
+
+    return rows[0]
+}
+
 export async function validateUserNotInOpenGame(userId: string): Promise<void> {
     const { rows } = await pool.query(`
-        SELECT 1 
+        SELECT 1
         FROM players p
         JOIN games g ON g.id = p.game_id
-        WHERE p.user_id = $1 
-        AND g.completed_at IS NULL
-        LIMIT 1
+        WHERE p.user_id = $1
+          AND g.completed_at IS NULL
+          AND g.started_at IS NOT NULL
+          AND p.revealed_at IS NULL
+            LIMIT 1
     `, [userId])
 
     if (rows.length > 0) {

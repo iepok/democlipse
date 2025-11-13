@@ -14,7 +14,7 @@ export default async function Home() {
         return <LoginButton />
     }
 
-    const { id: userId, email } = session?.user
+    const { id: userId, name, email } = session?.user
 
     const activeGame = await getUserActiveGame(userId)
 
@@ -23,7 +23,7 @@ export default async function Home() {
     }
 
     const lastUsedName = await getLastPlayerName(userId)
-    const defaultName = lastUsedName || email?.split('@')[0] || ''
+    const defaultName = lastUsedName || name || email?.split('@')[0] || ''
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
